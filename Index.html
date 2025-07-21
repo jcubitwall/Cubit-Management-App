@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cubit Company Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            overflow-x: auto;
+            gap: 5px;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 10px;
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .nav-tab.active {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+        
+        .nav-tab:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .tab-content {
+            display: none;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .data-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .data-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-in-progress { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-delivered { background: #d4edda; color: #155724; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        
+        .search-filter {
+            margin-bottom: 20px;
+        }
+        
+        .search-filter input {
+            max-width: 300px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            margin: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .nav-tab {
+                min-width: 100px;
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+            
+            .tab-content {
+                padding: 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-table {
+                font-size: 14px;
+            }
+            
+            .data-table th, .data-table td {
+                padding: 8px 6px;
+            }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🏠 Cubit Company Management</h1>
+            <p>Pod Construction • SIP Manufacturing • Home Delivery</p>
+        </div>
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button class="nav-tab" onclick="showTab('clients')">👥 Clients</button>
+            <button class="nav-tab" onclick="showTab('orders')">📋 Orders</button>
+            <button class="nav-tab" onclick="showTab('delivery')">🚛 Delivery</button>
+            <button class="nav-tab" onclick="showTab('installation')">🔧 Installation</button>
+            <button class="nav-tab" onclick="showTab('repairs')">⚙️ Repairs</button>
+            <button class="nav-tab" onclick="showTab('inventory')">📦 Inventory</button>
+        </div>
+        
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <h2>📊 Dashboard Overview</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalClients">0</div>
+                    <div class="stat-label">Total Clients</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeOrders">0</div>
+                    <div class="stat-label">Active Orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingDeliveries">0</div>
+                    <div class="stat-label">Pending Deliveries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="completedInstalls">0</div>
+                    <div class="stat-label">Completed Installs</div>
+                </div>
+            </div>
+            
+            <h3>Recent Activity</h3>
+            <div id="recentActivity">
+                <p>No recent activity</p>
+            </div>
+        </div>
+        
+        <!-- Clients Tab -->
+        <div id="clients" class="tab-content">
+            <h2>👥 Client Management</h2>
+            <button class="btn" onclick="openModal('clientModal')">+ Add New Client</button>
+            
+            <div class="search-filter">
+                <input type="text" id="clientSearch" placeholder="Search clients..." onkeyup="filterTable('clientsTable', 'clientSearch')">
+            </div>
+            
+            <table class="data-table" id="clientsTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="clientsTableBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px;">No clients added yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Orders Tab -->
+        <div id="orders" class="tab-content">
+            <h2>📋 Order Management</h2>
+            <button class="btn" onclick="openModal('orderModal')">+ Add New Order</button>
+            
+            <div class="search-filter">
+                <input type="text" id="orderSearch" placeholder="Search orders..." onkeyup="filterTable('ordersTable', 'orderSearch')">
+            </div>
+            
+            <table class="data-table" id="ordersTable">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Client</th>
+                        <th>Product Type</th>
+                        <th>Order Date</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">No orders added yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Delivery Tab -->
+        <div id="delivery" class="tab-content">
+            <h2>🚛 Delivery Management</h2>
+            <button class="btn" onclick="openModal('deliveryModal')">+ Schedule Delivery</button>
+            
+            <div class="search-filter">
+                <input type="text" id="deliverySearch" placeholder="Search deliveries..." onkeyup="filterTable('deliveriesTable', 'deliverySearch')">
+            </div>
+            
+            <table class="data-table" id="deliveriesTable">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Client</th>
+                        <th>Delivery Date</th>
+                        <th>Status</th>
+                        <th>Driver</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="deliveriesTableBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">No deliveries scheduled yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Installation Tab -->
+        <div id="installation" class="tab-content">
+            <h2>🔧 Installation Management</h2>
+            <button class="btn" onclick="openModal('installationModal')">+ Schedule Installation</button>
+            
+            <div class="search-filter">
+                <input type="text" id="installationSearch" placeholder="Search installations..." onkeyup="filterTable('installationsTable', 'installationSearch')">
+            </div>
+            
+            <table class="data-table" id="installationsTable">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Client</th>
+                        <th>Install Date</th>
+                        <th>Crew</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="installationsTableBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">No installations scheduled yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Repairs Tab -->
+        <div id="repairs" class="tab-content">
+            <h2>⚙️ Repair Management</h2>
+            <button class="btn" onclick="openModal('repairModal')">+ Add Repair Request</button>
+            
+            <div class="search-filter">
+                <input type="text" id="repairSearch" placeholder="Search repairs..." onkeyup="filterTable('repairsTable', 'repairSearch')">
+            </div>
+            
+            <table class="data-table" id="repairsTable">
+                <thead>
+                    <tr>
+                        <th>Ticket #</th>
+                        <th>Client</th>
+                        <th>Issue</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="repairsTableBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">No repair requests yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Inventory Tab -->
+        <div id="inventory" class="tab-content">
+            <h2>📦 Inventory Management</h2>
+            <button class="btn" onclick="openModal('inventoryModal')">+ Add Item</button>
+            
+            <div class="search-filter">
+                <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterTable('inventoryTable', 'inventorySearch')">
+            </div>
+            
+            <table class="data-table" id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>Stock</th>
+                        <th>Min. Stock</th>
+                        <th>Unit Cost</th>
+                        <th>Supplier</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">No inventory items added yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Client Modal -->
+    <div id="clientModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('clientModal')">&times;</span>
+            <h2>Add New Client</h2>
+            <form id="clientForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="clientFirstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="clientLastName" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="clientPhone">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="clientEmail">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea id="clientAddress"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="clientStatus">
+                            <option value="active">Active</option>
+                            <option value="prospect">Prospect</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="clientNotes"></textarea>
+                </div>
+                <button type="submit" class="btn">Save Client</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('clientModal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('orderModal')">&times;</span>
+            <h2>Add New Order</h2>
+            <form id="orderForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Client</label>
+                        <select id="orderClient" required>
+                            <option value="">Select Client</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Product Type</label>
+                        <select id="orderProduct" required>
+                            <option value="">Select Product</option>
+                            <option value="Life Pod">Life Pod</option>
+                            <option value="8x8 Pod">8x8 Pod</option>
+                            <option value="Shed">Shed</option>
+                            <option value="SIP Panel">SIP Panel</option>
+                            <option value="Custom Home">Custom Home</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Order Date</label>
+                        <input type="date" id="orderDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Expected Completion</label>
+                        <input type="date" id="orderCompletion">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Total Amount ($)</label>
+                        <input type="number" id="orderTotal" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="orderStatus">
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Specifications</label>
+                    <textarea id="orderSpecs"></textarea>
+                </div>
+                <button type="submit" class="btn">Save Order</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('orderModal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Delivery Modal -->
+    <div id="deliveryModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('deliveryModal')">&times;</span>
+            <h2>Schedule Delivery</h2>
+            <form id="deliveryForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Order</label>
+                        <select id="deliveryOrder" required>
+                            <option value="">Select Order</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Delivery Date</label>
+                        <input type="date" id="deliveryDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Driver/Crew</label>
+                        <input type="text" id="deliveryDriver">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="deliveryStatus">
+                            <option value="scheduled">Scheduled</option>
+                            <option value="in-transit">In Transit</option>
+                            <option value="delivered">Delivered</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Delivery Notes</label>
+                    <textarea id="deliveryNotes"></textarea>
+                </div>
+                <button type="submit" class="btn">Schedule Delivery</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('deliveryModal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Installation Modal -->
+    <div id="installationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('installationModal')">&times;</span>
+            <h2>Schedule Installation</h2>
+            <form id="installationForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Order</label>
+                        <select id="installationOrder" required>
+                            <option value="">Select Order</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Installation Date</label>
+                        <input type="date" id="installationDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Crew Lead</label>
+                        <input type="text" id="installationCrew">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="installationStatus">
+                            <option value="scheduled">Scheduled</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Installation Notes</label>
+                    <textarea id="installationNotes"></textarea>
+                </div>
+                <button type="submit" class="btn">Schedule Installation</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('installationModal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Repair Modal -->
+    <div id="repairModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('repairModal')">&times;</span>
+            <h2>Add Repair Request</h2>
+            <form id="repairForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Client</label>
+                        <select id="repairClient" required>
+                            <option value="">Select Client</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="repairPriority">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Assigned To</label>
+                        <input type="text" id="repairAssigned">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="repairStatus">
+                            <option value="open">Open</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Issue Description</label>
+                    <textarea id="repairIssue" required></textarea>
+                </div>
+                <button type="submit" class="btn">Create Repair Request</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('repairModal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Inventory Modal -->
+    <div id="inventoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('inventoryModal')">&times;</span>
+            <h2>Add Inventory Item</h2>
+            <form id="inventoryForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Item Name</label>
+                        <input type="text" id="inventoryName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="inventoryCategory">
+                            <option value="sip-panels">SIP Panels</option>
+                            <option value="hardware">Hardware</option>
+                            <option value="plumbing">Plumbing</option>
+                            <option value="electrical">Electrical</option>
+                            <option value="cabinetry">Cabinetry</option>
+                            <option value="butyl">Butyl Skin</option>
+                            <option value="tools">Tools</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Current Stock</label>
+                        <input type="number" id="inventoryStock" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Stock Level</label>
+                        <input type="number" id="inventoryMinStock">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Unit Cost ($)</label>
+                        <input type="number" id="inventoryCost" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Supplier</label>
+                        <input type="text" id="inventorySupplier">
+                    </div>
+                </div>
+                <button type="submit" class="btn">Add Item</button>
