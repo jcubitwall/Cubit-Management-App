@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Gantt Chart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#0c1626;
+    --navy:#12213a;
+    --line: rgba(255,255,255,0.08);
+    --ink:#eef2f7;
+    --muted:#93a3b8;
+    --faint:#5c6c81;
+    --danger:#c1594a;
+    --taskcol: 230px;
+    --rowh: 46px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background: var(--navy-deep);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    padding: 28px 4vw 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .toolbar{
+    max-width:1300px;
+    margin: 0 auto 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .titleblock input{
+    background:none;
+    border:none;
+    color:var(--ink);
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:clamp(22px,3.4vw,32px);
+    padding:2px 4px;
+    border-radius:4px;
+    outline:none;
+    width: min(70vw, 520px);
+  }
+  .titleblock input:focus{ background: rgba(255,255,255,0.06); }
+  .titleblock .sub{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--faint);
+    margin-top:4px;
+    max-width:560px;
+    line-height:1.5;
+  }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+  button.act{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:.03em;
+    background: var(--navy);
+    color:var(--ink);
+    border:1px solid var(--line);
+    padding:9px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    transition: background .15s;
+  }
+  button.act:hover{ background:#1a2d4c; }
+  button.act.primary{ background:#4aa596; color:#08201b; border-color:transparent; font-weight:600; }
+  button.act.primary:hover{ filter:brightness(1.08); }
+
+  .board{
+    max-width:1300px;
+    margin: 0 auto;
+    background: var(--navy);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    position:relative;
+  }
+  .col-resizer{
+    position:absolute;
+    top:0; bottom:0;
+    left: var(--taskcol);
+    width:10px;
+    margin-left:-5px;
+    cursor: ew-resize;
+    z-index:6;
+    touch-action:none;
+  }
+  .col-resizer::after{
+    content:"";
+    position:absolute;
+    top:0; bottom:0;
+    left:4px;
+    width:2px;
+    background: rgba(255,255,255,0.12);
+  }
+  .col-resizer:hover::after, .col-resizer.active::after{
+    background: #dba556;
+  }
+  .grid-head{
+    display:grid;
+    grid-template-columns: var(--taskcol) repeat(12, 1fr) 34px;
+    background: var(--navy-deep);
+    border-bottom:1px solid var(--line);
+  }
+  .grid-head .task-col{
+    padding: 14px 16px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--faint);
+    display:flex; align-items:center;
+  }
+  .grid-head .month{
+    padding: 14px 4px;
+    text-align:center;
+  }
+  .grid-head .month input{
+    width:100%;
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    text-align:center;
+    outline:none;
+    border-radius:3px;
+  }
+  .grid-head .month input:focus{ background: rgba(255,255,255,0.08); color:var(--ink); }
+  .grid-head .spacer{}
+
+  .rows{}
+  .row{
+    display:grid;
+    grid-template-columns: var(--taskcol) 1fr 34px;
+    border-bottom:1px solid var(--line);
+    align-items:stretch;
+  }
+  .row:nth-child(odd){ background: rgba(255,255,255,0.015); }
+  .step-name{
+    padding: 10px 16px;
+    display:flex;
+    align-items:flex-start;
+    font-family:'Oswald', sans-serif;
+    font-weight:500;
+    font-size:13.5px;
+    letter-spacing:.01em;
+    min-width:0;
+  }
+  .step-name [contenteditable]{
+    outline:none;
+    width:100%;
+    padding:6px 4px;
+    border-radius:4px;
+    line-height:1.35;
+  }
+  .step-name [contenteditable]:focus{ background: rgba(255,255,255,0.06); }
+  .lane-wrap{
+    position:relative;
+    min-height: var(--rowh);
+    display:grid;
+    grid-template-columns: repeat(12, 1fr);
+    padding: 5px 0;
+  }
+  .lane-wrap .cell{
+    border-left:1px dashed var(--line);
+  }
+  .lane-wrap .cell:first-child{ border-left:none; }
+  .lane-add{
+    position:absolute;
+    top:5px; right:5px;
+    width:22px; height:22px;
+    border-radius:50%;
+    background: rgba(255,255,255,0.08);
+    color:var(--muted);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+    cursor:pointer;
+    z-index:4;
+  }
+  .lane-add:hover{ background: rgba(255,255,255,0.16); color:var(--ink); }
+
+  .task{
+    position:absolute;
+    height: 36px;
+    border-radius:9px;
+    cursor:grab;
+    user-select:none;
+    touch-action:none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+    display:flex;
+    align-items:center;
+    padding: 0 16px;
+    gap:2px;
+    overflow:hidden;
+  }
+  .task:active{ cursor:grabbing; }
+  .task-body{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-width:0;
+    flex:1;
+    line-height:1.15;
+  }
+  .task-body [contenteditable]{
+    outline:none;
+    border-radius:3px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .task-body [contenteditable]:focus{
+    background: rgba(0,0,0,0.18);
+    white-space:normal;
+    overflow:visible;
+  }
+  .task-name-field{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    font-weight:600;
+    color:#0c1626;
+  }
+  .task-lead-field{
+    font-family:'Inter', sans-serif;
+    font-size:10px;
+    color:rgba(12,22,38,0.72);
+    margin-top:1px;
+  }
+  .task-lead-field:empty::before{
+    content:"+ lead";
+    color:rgba(12,22,38,0.45);
+  }
+  .swatch{
+    width:12px; height:12px;
+    border-radius:50%;
+    background: rgba(0,0,0,0.22);
+    border:1.5px solid rgba(255,255,255,0.5);
+    flex:none;
+    cursor:pointer;
+  }
+  .task-del{
+    position:absolute;
+    top:-6px; right:-6px;
+    width:16px; height:16px;
+    border-radius:50%;
+    background: var(--navy-deep);
+    border:1px solid var(--line);
+    color:var(--faint);
+    font-size:9px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    z-index:3;
+  }
+  .task-del:hover{ color:#fff; background:var(--danger); }
+
+  .task-c1{ background: linear-gradient(180deg,#7396bf,#5b7ba6); }
+  .task-c2{ background: linear-gradient(180deg,#eab86e,#dba556); }
+  .task-c3{ background: linear-gradient(180deg,#63bcae,#4aa596); }
+  .task-c4{ background: linear-gradient(180deg,#d98b74,#c1594a); }
+  .task-c5{ background: linear-gradient(180deg,#b79bd6,#8f70b8); }
+  .task-c6{ background: linear-gradient(180deg,#b0cc78,#8ba852); }
+
+  .handle{
+    position:absolute;
+    top:0; bottom:0;
+    width:14px;
+    cursor:ew-resize;
+    touch-action:none;
+    z-index:2;
+  }
+  .handle.left{ left:-2px; }
+  .handle.right{ right:-2px; }
+
+  .row-del{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--faint);
+    cursor:pointer;
+    font-size:16px;
+    opacity:.55;
+  }
+  .row-del:hover{ color:var(--danger); opacity:1; }
+
+  .addrow{
+    padding: 14px 16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:var(--faint);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .addrow:hover{ color:var(--ink); }
+
+  .hint{
+    max-width:1300px;
+    margin: 14px auto 0;
+    color:var(--faint);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    line-height:1.6;
+  }
+
+  @media (max-width: 820px){
+    .grid-head{ grid-template-columns: var(--taskcol) repeat(12, minmax(30px,1fr)) 28px; }
+    .row{ grid-template-columns: var(--taskcol) 1fr 28px; }
+    .step-name{ font-size:12px; padding:8px; }
+    .task-name-field{ font-size:9.5px; }
+    .task-lead-field{ font-size:8.5px; }
+  }
+
+  @media print{
+    body{ background:#fff; padding:0; }
+    .toolbar .actions{ display:none; }
+    .titleblock input{ color:#0c1626; }
+    .board{ border:1px solid #ccc; }
+    .grid-head{ background:#12213a; }
+    .row-del, .addrow, .lane-add, .task-del{ display:none; }
+    .col-resizer{ display:none; }
+    @page{ size: landscape; margin: 10mm; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="titleblock">
+    <input id="title" value="Cubit Home — Build Sequence" />
+    <div class="sub">tap a step or task name to edit · drag a task anywhere — up, down, sideways — to position or overlap it · drag its edges to resize · tap the dot to change color</div>
+  </div>
+  <div class="actions">
+    <button class="act" onclick="resetData()">Reset to sample</button>
+    <button class="act primary" onclick="window.print()">Export / Print PDF</button>
+  </div>
+</div>
+
+<div class="board">
+  <div class="col-resizer" id="colResizer"></div>
+  <div class="grid-head" id="gridHead">
+    <div class="task-col">Step</div>
+    <div class="spacer"></div>
+  </div>
+  <div class="rows" id="rows"></div>
+  <div class="addrow" onclick="addStep()">+ add step</div>
+</div>
+
+<div class="hint">Each step is a row. Tap the ⊕ in the top-right of a step's lane to add a task bubble — drag it freely up, down, or sideways to place it anywhere in that lane, including directly over another task. Data saves automatically on this device. Use "Export / Print PDF" and choose "Save to Files" / "Save as PDF" in the print sheet.</div>
+
+<script>
+const STORE_KEY = 'gantt-chart-data-v2';
+const COLS = 12;
+const PALETTE = ['c1','c2','c3','c4','c5','c6'];
+const ROWH = 46;
+
+const DEFAULT_DATA = {
+  title: "Cubit Home — Build Sequence",
+  taskColWidth: 230,
+  months: ["Wk 1","Wk 2","Wk 3","Wk 4","Wk 5","Wk 6","Wk 7","Wk 8","Wk 9","Wk 10","Wk 11","Wk 12"],
+  steps: [
+    { name:"Pre-Step", tasks:[
+        { name:"Order shower / toilet / appliances", lead:"Johnny", start:0, span:2, color:"c1", row:0 },
+        { name:"Permits & inspections booked", lead:"Sean", start:0, span:1, color:"c2", row:1 },
+        { name:"Make SIPs (press buffer)", lead:"Joshua", start:1, span:2, color:"c3", row:2 }
+      ]
+    },
+    { name:"Step 1 — Materials / SIPs", tasks:[
+        { name:"Source LVLs & lumber", lead:"Sean Bigelow", start:1, span:2, color:"c1", row:0 },
+        { name:"Cut SIP parts", lead:"Joshua", start:2, span:2, color:"c3", row:1 }
+      ]
+    },
+    { name:"Step 2A — Box / Envelope", tasks:[
+        { name:"Box construction", lead:"Joshua", start:3, span:3, color:"c2", row:0 },
+        { name:"Butyl + windows & doors", lead:"Jed / Kian", start:4, span:2, color:"c4", row:1 },
+        { name:"Call electrician", lead:"Sean", start:4, span:1, color:"c5", row:2 }
+      ]
+    },
+    { name:"Step 2B — Ceiling / Cabinets", tasks:[
+        { name:"Cut ceiling & window boxes", lead:"Brad", start:4, span:2, color:"c3", row:0 },
+        { name:"Cut & assemble cabinets", lead:"Brad / Kian", start:5, span:3, color:"c6", row:1 }
+      ]
+    },
+    { name:"Step 3A — Rough-in", tasks:[
+        { name:"Plumbing rough-in", lead:"Heinrich", start:6, span:1, color:"c1", row:0 },
+        { name:"Electrical rough-in", lead:"Electrician", start:6, span:2, color:"c5", row:1 },
+        { name:"QC + framing inspection", lead:"Sean", start:7, span:1, color:"c2", row:2 }
+      ]
+    },
+    { name:"Step 3B — Roof Close-in", tasks:[
+        { name:"SIP roof install", lead:"Joshua", start:7, span:2, color:"c3", row:0 },
+        { name:"Compression seal + roof butyl", lead:"Joshua", start:8, span:1, color:"c4", row:1 }
+      ]
+    },
+    { name:"Step 4A — Exterior", tasks:[
+        { name:"Siding", lead:"Joshua", start:8, span:2, color:"c2", row:0 },
+        { name:"ACP roof", lead:"Mark / Jaden", start:9, span:2, color:"c6", row:1 }
+      ]
+    },
+    { name:"Step 4B — Interior Finish / Delivery", tasks:[
+        { name:"Cabinetry & counter install", lead:"Brad", start:9, span:2, color:"c3", row:0 },
+        { name:"Final plugs & switches", lead:"Electrician", start:10, span:1, color:"c5", row:1 },
+        { name:"Transport prep & delivery", lead:"Sean", start:10, span:2, color:"c1", row:2 }
+      ]
+    }
+  ]
+};
+
+let data = null;
+
+async function loadData(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    data = raw ? JSON.parse(raw) : structuredClone(DEFAULT_DATA);
+  }catch(e){
+    data = structuredClone(DEFAULT_DATA);
+  }
+  render();
+}
+
+async function saveData(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  }catch(e){ /* non-fatal */ }
+}
+
+function resetData(){
+  if(!confirm("Reset to the sample chart? This clears your edits.")) return;
+  data = structuredClone(DEFAULT_DATA);
+  render();
+  saveData();
+}
+
+function addStep(){
+  data.steps.push({ name:"New step", tasks:[
+    { name:"New task", lead:"", start:0, span:2, color: PALETTE[data.steps.length % PALETTE.length] }
+  ]});
+  render();
+  saveData();
+}
+
+function removeStep(si){
+  data.steps.splice(si,1);
+  render();
+  saveData();
+}
+
+function addTaskToStep(si){
+  const step = data.steps[si];
+  const nextColor = PALETTE[step.tasks.length % PALETTE.length];
+  const row = findFreeRow(step.tasks, 0, 2);
+  step.tasks.push({ name:"New task", lead:"", start:0, span:2, color: nextColor, row });
+  render();
+  saveData();
+}
+
+function removeTaskFromStep(si, ti){
+  data.steps[si].tasks.splice(ti,1);
+  render();
+  saveData();
+}
+
+function findFreeRow(tasks, start, span){
+  const occupied = new Set();
+  tasks.forEach(t=>{
+    if(t.start < start+span && start < t.start+t.span){
+      occupied.add(t.row||0);
+    }
+  });
+  let r = 0;
+  while(occupied.has(r)) r++;
+  return r;
+}
+
+function maxRowInStep(tasks){
+  return tasks.reduce((m,t)=> Math.max(m, t.row||0), 0);
+}
+
+function render(){
+  document.getElementById('title').value = data.title;
+  if(!data.taskColWidth) data.taskColWidth = 230;
+  document.documentElement.style.setProperty('--taskcol', data.taskColWidth + 'px');
+
+  const head = document.getElementById('gridHead');
+  head.innerHTML = '<div class="task-col">Step</div>' +
+    data.months.map((m,i)=>`<div class="month"><input value="${escapeAttr(m)}" data-mi="${i}" oninput="onMonthEdit(event)"/></div>`).join('') +
+    '<div class="spacer"></div>';
+
+  const rows = document.getElementById('rows');
+  rows.innerHTML = '';
+  data.steps.forEach((step, si)=>{
+    const maxRow = maxRowInStep(step.tasks);
+    const laneHeight = (maxRow + 2) * ROWH + 10;
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <div class="step-name"><div contenteditable="true" data-si="${si}" onblur="onStepNameEdit(event)">${escapeHtml(step.name)}</div></div>
+      <div class="lane-wrap" data-si="${si}" style="min-height:${laneHeight}px;">
+        ${Array.from({length:COLS}).map(()=>'<div class="cell"></div>').join('')}
+        <div class="lane-add" onclick="addTaskToStep(${si})">+</div>
+      </div>
+      <div class="row-del" onclick="removeStep(${si})">✕</div>
+    `;
+    rows.appendChild(row);
+    const lane = row.querySelector('.lane-wrap');
+    step.tasks.forEach((t, ti)=>{
+      if(t.row === undefined) t.row = 0;
+      drawTask(lane, t, si, ti);
+    });
+  });
+}
+
+function drawTask(lane, t, si, ti){
+  const colW = 100/COLS;
+  const el = document.createElement('div');
+  el.className = 'task task-' + t.color;
+  el.style.left = (t.start*colW) + '%';
+  el.style.width = (t.span*colW) + '%';
+  el.style.top = (6 + t.row*ROWH) + 'px';
+  el.innerHTML = `
+    <div class="swatch" data-role="swatch"></div>
+    <div class="task-body">
+      <div class="task-name-field" contenteditable="true" data-role="name">${escapeHtml(t.name)}</div>
+      <div class="task-lead-field" contenteditable="true" data-role="lead">${escapeHtml(t.lead||'')}</div>
+    </div>
+    <div class="handle left"></div>
+    <div class="handle right"></div>
+    <div class="task-del" data-role="del">✕</div>
+  `;
+  lane.appendChild(el);
+
+  const hl = el.querySelector('.handle.left');
+  const hr = el.querySelector('.handle.right');
+  const nameField = el.querySelector('[data-role="name"]');
+  const leadField = el.querySelector('[data-role="lead"]');
+  const swatch = el.querySelector('[data-role="swatch"]');
+  const delBtn = el.querySelector('[data-role="del"]');
+
+  nameField.addEventListener('blur', ()=>{
+    t.name = nameField.textContent.trim() || "Untitled task";
+    saveData();
+  });
+  leadField.addEventListener('blur', ()=>{
+    t.lead = leadField.textContent.trim();
+    saveData();
+  });
+  swatch.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const idx = PALETTE.indexOf(t.color);
+    t.color = PALETTE[(idx+1) % PALETTE.length];
+    el.className = 'task task-' + t.color;
+    saveData();
+  });
+  delBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    removeTaskFromStep(si, ti);
+  });
+
+  attachDrag(el, hl, hr, lane, t, nameField, leadField, swatch, delBtn);
+}
+
+function attachDrag(el, hl, hr, lane, t, nameField, leadField, swatch, delBtn){
+  let mode = null;
+  let startX = 0, startY = 0, startStart = 0, startSpan = 0, startRow = 0;
+
+  function colWidthPx(){ return lane.getBoundingClientRect().width / COLS; }
+
+  function isInteractive(target){
+    return target === hl || target === hr || target === nameField || target === leadField ||
+           target === swatch || target === delBtn || nameField.contains(target) || leadField.contains(target);
+  }
+
+  function onDown(e, m){
+    mode = m;
+    startX = e.clientX;
+    startY = e.clientY;
+    startStart = t.start;
+    startSpan = t.span;
+    startRow = t.row;
+    el.dataset.dragged = '0';
+    e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  function onMove(e){
+    const dxCols = Math.round((e.clientX - startX) / colWidthPx());
+    if(Math.abs(dxCols) >= 1) el.dataset.dragged = '1';
+    if(mode === 'move'){
+      t.start = clamp(startStart + dxCols, 0, COLS - startSpan);
+      const dRows = Math.round((e.clientY - startY) / ROWH);
+      if(dRows !== 0) el.dataset.dragged = '1';
+      t.row = clamp(startRow + dRows, 0, 40);
+      el.style.top = (6 + t.row*ROWH) + 'px';
+      const neededHeight = (t.row + 2) * ROWH + 10;
+      if(neededHeight > lane.offsetHeight){
+        lane.style.minHeight = neededHeight + 'px';
+      }
+    } else if(mode === 'right'){
+      t.span = clamp(startSpan + dxCols, 1, COLS - t.start);
+    } else if(mode === 'left'){
+      const ns = clamp(startStart + dxCols, 0, startStart + startSpan - 1);
+      t.span = startSpan - (ns - startStart);
+      t.start = ns;
+    }
+    const colW = 100/COLS;
+    el.style.left = (t.start*colW) + '%';
+    el.style.width = (t.span*colW) + '%';
+  }
+
+  function onUp(){
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    const dragged = el.dataset.dragged === '1';
+    mode = null;
+    if(dragged){
+      saveData();
+      render();
+    }
+  }
+
+  el.addEventListener('pointerdown', (e)=>{
+    if(isInteractive(e.target)) return;
+    onDown(e, 'move');
+  });
+  hl.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); onDown(e, 'left'); });
+  hr.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); onDown(e, 'right'); });
+}
+
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function onStepNameEdit(e){
+  const si = +e.target.dataset.si;
+  data.steps[si].name = e.target.textContent.trim() || "Untitled step";
+  saveData();
+}
+function onMonthEdit(e){
+  const i = +e.target.dataset.mi;
+  data.months[i] = e.target.value;
+  saveData();
+}
+document.getElementById('title').addEventListener('input', (e)=>{
+  data.title = e.target.value;
+  saveData();
+});
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+
+function setupColumnResizer(){
+  const handle = document.getElementById('colResizer');
+  const board = document.querySelector('.board');
+  let startX = 0, startW = 0, dragging = false;
+
+  handle.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    startX = e.clientX;
+    startW = data.taskColWidth || 230;
+    handle.classList.add('active');
+    handle.setPointerCapture && handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  window.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const boardW = board.getBoundingClientRect().width;
+    const maxW = Math.round(boardW * 0.6);
+    let w = clamp(startW + (e.clientX - startX), 110, maxW);
+    data.taskColWidth = w;
+    document.documentElement.style.setProperty('--taskcol', w + 'px');
+  });
+  window.addEventListener('pointerup', ()=>{
+    if(!dragging) return;
+    dragging = false;
+    handle.classList.remove('active');
+    saveData();
+  });
+}
+setupColumnResizer();
+
+loadData();
+</script>
+
+</body>
+</html>
